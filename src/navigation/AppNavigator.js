@@ -7,7 +7,8 @@ import { Text } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SessionDetailScreen from '../screens/SessionDetailScreen';
-import SessionScreen from '../screens/SessionScreen';
+import SessionScreen, { wsRef } from '../screens/SessionScreen';
+import ConfigScreen from '../screens/ConfigScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -25,9 +26,12 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Tab.Navigator screenOptions={{ tabBarActiveTintColor: '#00ff88', tabBarStyle: { backgroundColor: '#111' }, headerShown: false }}>
-        <Tab.Screen name="Train" component={HomeScreen} options={{ tabBarIcon: () => <Text>🏋️</Text> }} />
+        <Tab.Screen name="Train"   component={HomeScreen}    options={{ tabBarIcon: () => <Text>🏋️</Text> }} />
         <Tab.Screen name="Session" component={SessionScreen} options={{ tabBarIcon: () => <Text>📡</Text> }} />
-        <Tab.Screen name="History" component={HistoryStack} options={{ tabBarIcon: () => <Text>📊</Text> }} />
+        <Tab.Screen name="History" component={HistoryStack}  options={{ tabBarIcon: () => <Text>📊</Text> }} />
+        <Tab.Screen name="Config"  options={{ tabBarIcon: () => <Text>⚙️</Text> }}>
+          {() => <ConfigScreen wsRef={wsRef} />}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );

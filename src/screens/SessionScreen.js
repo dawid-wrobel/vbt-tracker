@@ -1,70 +1,61 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 
+// Shared wsRef — passed to ConfigScreen via navigation
+export const wsRef = { current: null };
+
 export default function SessionScreen({ route, navigation }) {
-  const exercise = route?.params?.exercise;
   const [sessionId, setSessionId] = useState(null);
   const [reps, setReps] = useState([]);
   const [active, setActive] = useState(false);
   const [wsStatus, setWsStatus] = useState('disconnected');
-  const wsRef = useRef(null);
-  const sessionIdRef = useRef(null);
   const repsRef = useRef([]);
+  const sessionIdRef = useRef(null);
 
-  // Keep repsRef in sync
   useEffect(() => { repsRef.current = reps; }, [reps]);
 
-  const connectWebSocket = (sid) => {
-    // Close existing connection
+  const connectWebSocket = async (sid) => {
     if (wsRef.current) wsRef.current.close();
 
-    const ws = new WebSocket('wss://your-railway-url.up.railway.app');
-    wsRef.current = ws;
+    // Load saved config and send on connect
+    const saved = await AsyncStorage.getItem('vbt_config');
+    const cfg = saved ? JSON.parse(saved) : null;
 
-    ws.onopen = () => {
-      console.log('WS open');
+    const socket = new WebSocket('wss://web-production-90596.up.railway.app');
+    wsRef.current = socket;
+
+    socket.onopen = () => {
       setWsStatus('connected');
+      // Send saved config to sensor on connect
+      if (cfg) socket.send(JSON.stringify({ cmd: 'config', ...cfg }));
     };
 
-    ws.onmessage = (e) => {
-      console.log('WS message:', e.data);
+    socket.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
         if (data.type === 'rep') {
-          const rep = {
-            ...data.rep,
-            repNumber: repsRef.current.length + 1
-          };
+          const rep = { ...data.rep, repNumber: repsRef.current.length + 1 };
           setReps(prev => [...prev, rep]);
-          // Save rep to backend
           api.addRep({ sessionId: sid, rep }).catch(console.error);
         }
-      } catch (err) {
-        console.error('WS parse error:', err);
-      }
+      } catch {}
     };
 
-    ws.onerror = (e) => {
-      console.error('WS error:', e.message);
-      setWsStatus('error');
-    };
-
-    ws.onclose = () => {
-      console.log('WS closed');
-      setWsStatus('disconnected');
-    };
+    socket.onerror = () => setWsStatus('error');
+    socket.onclose = () => setWsStatus('disconnected');
   };
 
   const startSession = async () => {
-    if (!exercise) {
-      Alert.alert('No exercise', 'Go to Train tab and select an exercise first');
+    if (!route?.params?.exercise) {
+      Alert.alert('No exercise', 'Select an exercise from Train tab first');
       return;
     }
     try {
       const res = await api.startSession({
-        exerciseId: exercise._id,
-        exerciseName: exercise.name
+        exerciseId: route.params.exercise._id,
+        exerciseName: route.params.exercise.name
       });
       const sid = res.data._id;
       setSessionId(sid);
@@ -72,8 +63,8 @@ export default function SessionScreen({ route, navigation }) {
       setReps([]);
       setActive(true);
       connectWebSocket(sid);
-    } catch (e) {
-      Alert.alert('Error', 'Could not start session — check internet connection');
+    } catch {
+      Alert.alert('Error', 'Could not start session');
     }
   };
 
@@ -87,7 +78,7 @@ export default function SessionScreen({ route, navigation }) {
         screen: 'SessionDetail',
         params: { session: res.data }
       });
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not finish session');
     }
   };
@@ -97,27 +88,23 @@ export default function SessionScreen({ route, navigation }) {
       repNumber: reps.length + 1,
       concentricDuration: Math.round(500 + Math.random() * 300),
       eccentricDuration: Math.round(700 + Math.random() * 300),
-      peakVelocity: parseFloat((0.9 - reps.length * 0.03 + Math.random() * 0.1).toFixed(3)),
-      avgVelocity: parseFloat((0.7 - reps.length * 0.02 + Math.random() * 0.1).toFixed(3)),
+      peakVelocity: parseFloat((0.9 - reps.length * 0.03).toFixed(3)),
+      avgVelocity: parseFloat((0.7 - reps.length * 0.02).toFixed(3)),
       velocityLoss: parseFloat((reps.length * 3).toFixed(1))
     };
     setReps(prev => [...prev, rep]);
     if (sessionId) api.addRep({ sessionId, rep }).catch(console.error);
   };
 
-  const velocityColor = (v) => v > 0.7 ? '#00ff88' : v > 0.5 ? '#ffe66d' : '#ff6b6b';
+  const vc = (v) => v > 0.7 ? '#00ff88' : v > 0.5 ? '#ffe66d' : '#ff6b6b';
   const wsColor = { connected: '#00ff88', disconnected: '#555', error: '#ff6b6b' };
 
   return (
     <View style={s.container}>
-      <Text style={s.title}>{exercise?.name || 'Select exercise in Train tab'}</Text>
-
-      {/* WebSocket status */}
+      <Text style={s.title}>{route?.params?.exercise?.name || 'Select exercise in Train tab'}</Text>
       <View style={s.statusRow}>
         <View style={[s.dot, { backgroundColor: wsColor[wsStatus] }]} />
-        <Text style={s.statusText}>
-          Sensor: {wsStatus === 'connected' ? 'Connected' : wsStatus === 'error' ? 'Error' : 'Waiting...'}
-        </Text>
+        <Text style={s.statusText}>Sensor: {wsStatus}</Text>
       </View>
 
       {!active ? (
@@ -130,25 +117,19 @@ export default function SessionScreen({ route, navigation }) {
             <Text style={s.repNum}>{reps.length}</Text>
             <Text style={s.repLabel}>REPS</Text>
           </View>
-
-          {/* Simulate button for testing without hardware */}
           <TouchableOpacity style={s.simBtn} onPress={simulateRep}>
             <Text style={s.simBtnText}>+ SIMULATE REP (test)</Text>
           </TouchableOpacity>
-
           <ScrollView style={s.repList}>
             {reps.slice().reverse().map((r, i) => (
               <View key={i} style={s.repRow}>
                 <Text style={s.repRowNum}>REP {r.repNumber}</Text>
-                <Text style={[s.vel, { color: velocityColor(r.avgVelocity) }]}>
-                  {parseFloat(r.avgVelocity).toFixed(2)} m/s
-                </Text>
+                <Text style={[s.vel, { color: vc(r.avgVelocity) }]}>{parseFloat(r.avgVelocity).toFixed(2)} m/s</Text>
                 <Text style={s.phase}>↑{r.concentricDuration}ms ↓{r.eccentricDuration}ms</Text>
                 <Text style={s.loss}>-{parseFloat(r.velocityLoss).toFixed(1)}%</Text>
               </View>
             ))}
           </ScrollView>
-
           <TouchableOpacity style={s.finishBtn} onPress={finishSession}>
             <Text style={s.finishBtnText}>FINISH SESSION</Text>
           </TouchableOpacity>
