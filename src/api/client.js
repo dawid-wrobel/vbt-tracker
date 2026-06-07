@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://web-production-90596.up.railway.app/api';
+const BASE_URL = 'https://vbt-backend-production.up.railway.app/api';
 
 const client = axios.create({ baseURL: BASE_URL });
 

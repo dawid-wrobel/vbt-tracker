@@ -23,7 +23,7 @@ export default function SessionScreen({ route, navigation }) {
     const saved = await AsyncStorage.getItem('vbt_config');
     const cfg = saved ? JSON.parse(saved) : null;
 
-    const socket = new WebSocket('wss://web-production-90596.up.railway.app');
+    const socket = new WebSocket('wss://vbt-backend-production.up.railway.app');
     wsRef.current = socket;
 
     socket.onopen = () => {
