@@ -6,12 +6,12 @@ import { api } from '../api/client';
 
 const W = Dimensions.get('window').width;
 
-export default function SessionDetailScreen({ route }) {
+export default function SessionDetailScreen({ route, navigation }) {
   const [session, setSession] = useState(route.params.session);
 
   useEffect(() => {
     if (session._id) {
-      api.getSession(session._id).then(r => setSession(r.data));
+      api.getSession(session._id).then(r => setSession(r.data)).catch(() => {});
     }
   }, []);
 
@@ -19,28 +19,26 @@ export default function SessionDetailScreen({ route }) {
     try {
       const res = await api.exportSession(session._id, format);
       await Share.share({ message: format === 'csv' ? res.data : JSON.stringify(res.data, null, 2) });
-    } catch (e) {
+    } catch {
       Alert.alert('Export failed');
     }
   };
 
   const reps = session.reps || [];
-  const velocityData = reps.map(r => r.avgVelocity || 0);
-  //const fatigueIndex = session.summary?.fatigueIndex || 0;
-  //const fatigueColor = fatigueIndex < 30 ? '#00ff88' : fatigueIndex < 60 ? '#ffe66d' : '#ff6b6b';
+  const velocityData = reps.map(r => parseFloat(r.avgVelocity) || 0);
+  const hasChart = velocityData.length > 1;
 
   return (
     <ScrollView style={s.container}>
       <Text style={s.title}>{session.exerciseName}</Text>
       <Text style={s.date}>{new Date(session.startTime).toLocaleString()}</Text>
 
-      {/* Summary cards */}
       <View style={s.grid}>
         {[
-          { label: 'REPS', value: session.summary?.totalReps || reps.length },
+          { label: 'REPS',     value: session.summary?.totalReps || reps.length },
           { label: 'PEAK VEL', value: `${(session.summary?.peakVelocity || 0).toFixed(2)} m/s` },
-          { label: 'AVG VEL', value: `${(session.summary?.avgVelocity || 0).toFixed(2)} m/s` },
-          { label: 'VEL LOSS', value: `${(session.summary?.velocityLoss || 0).toFixed(1)}%` },
+          { label: 'AVG VEL',  value: `${(session.summary?.avgVelocity  || 0).toFixed(2)} m/s` },
+          { label: 'AVG CONC', value: `${Math.round(session.summary?.avgConcentricDuration || 0)}ms` },
         ].map((item, i) => (
           <View key={i} style={s.statCard}>
             <Text style={s.statValue}>{item.value}</Text>
@@ -49,26 +47,34 @@ export default function SessionDetailScreen({ route }) {
         ))}
       </View>
 
-      {/* Velocity chart */}
-      {velocityData.length > 0 && (
+      {hasChart && (
         <View style={s.chartCard}>
           <Text style={s.chartTitle}>VELOCITY PER REP</Text>
           <LineChart
-            data={{ labels: reps.map((_, i) => `${i + 1}`), datasets: [{ data: velocityData }] }}
+            data={{
+              labels: reps.map((_, i) => `${i + 1}`),
+              datasets: [{ data: velocityData.length > 0 ? velocityData : [0] }]
+            }}
             width={W - 40}
-            height={200}
+            height={180}
             chartConfig={{
-              backgroundColor: '#1a1a1a', backgroundGradientFrom: '#1a1a1a', backgroundGradientTo: '#1a1a1a',
-              decimalPlaces: 2, color: () => '#00ff88', labelColor: () => '#555',
-              propsForDots: { r: '5', strokeWidth: '2', stroke: '#00ff88' }
+              backgroundColor: '#1a1a1a',
+              backgroundGradientFrom: '#1a1a1a',
+              backgroundGradientTo: '#1a1a1a',
+              decimalPlaces: 2,
+              color: () => '#00ff88',
+              labelColor: () => '#555',
+              propsForDots: { r: '4', strokeWidth: '2', stroke: '#00ff88' },
+              propsForBackgroundLines: { stroke: '#222' },
             }}
             bezier
             style={{ borderRadius: 8 }}
+            withInnerLines={true}
+            withOuterLines={false}
           />
         </View>
       )}
 
-      {/* Rep breakdown */}
       {reps.map((r, i) => (
         <View key={i} style={s.repCard}>
           <Text style={s.repTitle}>REP {r.repNumber}</Text>
@@ -77,13 +83,12 @@ export default function SessionDetailScreen({ route }) {
             <Text style={s.repMeta}>↓ Eccentric: {r.eccentricDuration}ms</Text>
           </View>
           <View style={s.repRow}>
-            <Text style={s.repMeta}>Peak: {r.peakVelocity?.toFixed(2)} m/s</Text>
-            <Text style={s.repMeta}>Avg: {r.avgVelocity?.toFixed(2)} m/s</Text>
+            <Text style={s.repMeta}>Peak: {parseFloat(r.peakVelocity).toFixed(3)} m/s</Text>
+            <Text style={s.repMeta}>Avg: {parseFloat(r.avgVelocity).toFixed(3)} m/s</Text>
           </View>
         </View>
       ))}
 
-      {/* Export buttons */}
       <View style={s.exportRow}>
         <TouchableOpacity style={s.exportBtn} onPress={() => exportData('json')}>
           <Text style={s.exportBtnText}>Export JSON</Text>
@@ -92,6 +97,17 @@ export default function SessionDetailScreen({ route }) {
           <Text style={s.exportBtnText}>Export CSV</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={s.exportRow}>
+        <TouchableOpacity style={s.nextBtn} onPress={() => navigation.navigate('Session', { exercise: { _id: session.exerciseId, name: session.exerciseName } })}>
+          <Text style={s.nextBtnText}>NEXT SESSION</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.navigate('Train')}>
+          <Text style={s.backBtnText}>BACK TO EXERCISES</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -104,15 +120,17 @@ const s = StyleSheet.create({
   statCard: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 16, width: (W - 60) / 2, alignItems: 'center' },
   statValue: { color: '#00ff88', fontSize: 24, fontWeight: '900' },
   statLabel: { color: '#555', fontSize: 10, letterSpacing: 2, marginTop: 4 },
-  bar: { height: 8, backgroundColor: '#2a2a2a', borderRadius: 4, marginTop: 8 },
-  barFill: { height: 8, borderRadius: 4 },
   chartCard: { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, marginBottom: 16 },
   chartTitle: { color: '#555', fontSize: 10, letterSpacing: 3, marginBottom: 12 },
   repCard: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 14, marginBottom: 8 },
   repTitle: { color: '#00ff88', fontWeight: '700', marginBottom: 6, fontSize: 12, letterSpacing: 2 },
-  repRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  repRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
   repMeta: { color: '#888', fontSize: 12 },
-  exportRow: { flexDirection: 'row', gap: 12, marginVertical: 20 },
+  exportRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   exportBtn: { flex: 1, backgroundColor: '#1a1a1a', padding: 14, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  exportBtnText: { color: '#fff', fontWeight: '700' }
+  exportBtnText: { color: '#888', fontWeight: '700', fontSize: 13 },
+  nextBtn: { flex: 1, backgroundColor: '#00ff88', padding: 16, borderRadius: 10, alignItems: 'center' },
+  nextBtnText: { color: '#000', fontWeight: '900', fontSize: 13, letterSpacing: 1 },
+  backBtn: { flex: 1, backgroundColor: '#1a1a1a', padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  backBtnText: { color: '#555', fontWeight: '700', fontSize: 13 },
 });

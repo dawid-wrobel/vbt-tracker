@@ -6,6 +6,7 @@ import { api } from '../api/client';
 export const wsRef = { current: null };
 
 export default function SessionScreen({ route, navigation }) {
+  const exercise = route?.params?.exercise;
   const [sessionId, setSessionId] = useState(null);
   const [reps, setReps] = useState([]);
   const [active, setActive] = useState(false);
@@ -41,14 +42,10 @@ export default function SessionScreen({ route, navigation }) {
   };
 
   const startSession = async () => {
-    if (!route?.params?.exercise) {
-      Alert.alert('No exercise', 'Select an exercise from Train tab first');
-      return;
-    }
     try {
       const res = await api.startSession({
-        exerciseId: route.params.exercise._id,
-        exerciseName: route.params.exercise.name
+        exerciseId: exercise._id,
+        exerciseName: exercise.name
       });
       const sid = res.data._id;
       setSessionId(sid);
@@ -68,10 +65,7 @@ export default function SessionScreen({ route, navigation }) {
       setActive(false);
       setSessionId(null);
       setWsConnected(false);
-      navigation.navigate('History', {
-        screen: 'SessionDetail',
-        params: { session: res.data }
-      });
+      navigation.navigate('SessionDetail', { session: res.data });
     } catch {
       Alert.alert('Error', 'Could not finish session');
     }
@@ -95,7 +89,7 @@ export default function SessionScreen({ route, navigation }) {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>{route?.params?.exercise?.name || 'Select exercise in Train tab'}</Text>
+        <Text style={s.title}>{exercise?.name}</Text>
         {wsConnected && (
           <View style={s.wsbadge}>
             <View style={s.wsdot} />
@@ -105,28 +99,35 @@ export default function SessionScreen({ route, navigation }) {
       </View>
 
       {!active ? (
-        <TouchableOpacity style={s.startBtn} onPress={startSession}>
-          <Text style={s.startBtnText}>START SESSION</Text>
-        </TouchableOpacity>
+        // Centered start button
+        <View style={s.centerWrap}>
+          <TouchableOpacity style={s.startBtn} onPress={startSession}>
+            <Text style={s.startBtnText}>START SESSION</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           <View style={s.repCount}>
             <Text style={s.repNum}>{reps.length}</Text>
             <Text style={s.repLabel}>REPS</Text>
           </View>
+
           <TouchableOpacity style={s.simBtn} onPress={simulateRep}>
             <Text style={s.simBtnText}>+ SIMULATE REP (test)</Text>
           </TouchableOpacity>
+
           <ScrollView style={s.repList}>
             {reps.slice().reverse().map((r, i) => (
               <View key={i} style={s.repRow}>
                 <Text style={s.repRowNum}>REP {r.repNumber}</Text>
-                <Text style={[s.vel, { color: vc(r.avgVelocity) }]}>{parseFloat(r.avgVelocity).toFixed(2)} m/s</Text>
+                <Text style={[s.vel, { color: vc(r.avgVelocity) }]}>
+                  {parseFloat(r.avgVelocity).toFixed(2)} m/s
+                </Text>
                 <Text style={s.phase}>↑{r.concentricDuration}ms ↓{r.eccentricDuration}ms</Text>
-                <Text style={s.loss}>-{parseFloat(r.velocityLoss).toFixed(1)}%</Text>
               </View>
             ))}
           </ScrollView>
+
           <TouchableOpacity style={s.finishBtn} onPress={finishSession}>
             <Text style={s.finishBtnText}>FINISH SESSION</Text>
           </TouchableOpacity>
@@ -140,12 +141,12 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a', padding: 20, paddingTop: 60 },
   header: { marginBottom: 20 },
   title: { color: '#00ff88', fontSize: 22, fontWeight: '900' },
-  wsbage: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   wsbadge: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   wsdot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00ff88', marginRight: 6 },
   wstext: { color: '#00ff88', fontSize: 12 },
-  startBtn: { backgroundColor: '#00ff88', padding: 20, borderRadius: 12, alignItems: 'center' },
-  startBtnText: { color: '#000', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
+  centerWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  startBtn: { backgroundColor: '#00ff88', paddingVertical: 20, paddingHorizontal: 48, borderRadius: 16 },
+  startBtnText: { color: '#000', fontWeight: '900', fontSize: 20, letterSpacing: 2 },
   repCount: { alignItems: 'center', marginVertical: 16 },
   repNum: { color: '#00ff88', fontSize: 80, fontWeight: '900' },
   repLabel: { color: '#555', letterSpacing: 4, fontSize: 12 },
@@ -155,8 +156,7 @@ const s = StyleSheet.create({
   repRow: { backgroundColor: '#1a1a1a', padding: 14, borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   repRowNum: { color: '#555', fontSize: 12, fontWeight: '700', width: 50 },
   vel: { fontSize: 18, fontWeight: '900', width: 70 },
-  phase: { color: '#888', fontSize: 11, flex: 1, textAlign: 'center' },
-  loss: { color: '#ff6b6b', fontSize: 12, fontWeight: '700' },
+  phase: { color: '#888', fontSize: 11, flex: 1, textAlign: 'right' },
   finishBtn: { backgroundColor: '#ff6b6b', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 12 },
   finishBtnText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 2 }
 });

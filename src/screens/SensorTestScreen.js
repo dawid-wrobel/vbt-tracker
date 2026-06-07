@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
+const WS_URL = 'wss://vbt-backend-production.up.railway.app'; // ← update this
+
 export default function SensorTestScreen() {
   const [running, setRunning] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
@@ -17,7 +19,7 @@ export default function SensorTestScreen() {
     repsRef.current = [];
     setRunning(true);
 
-    const socket = new WebSocket('wss://your-railway-url.up.railway.app');
+    const socket = new WebSocket(WS_URL);
     wsRef.current = socket;
 
     socket.onopen = () => setWsConnected(true);
@@ -77,7 +79,7 @@ export default function SensorTestScreen() {
         </Text>
       </View>
 
-      {lastReading && sensorActive && (
+      {sensorActive && lastReading && (
         <View style={s.grid}>
           <View style={s.cell}>
             <Text style={s.cellVal}>{lastReading.accelMag}</Text>

@@ -7,7 +7,8 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getExercises().then(r => { setExercises(r.data); setLoading(false); })
+    api.getExercises()
+      .then(r => { setExercises(r.data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
@@ -29,7 +30,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={s.category}>{item.category?.toUpperCase()}</Text>
             </TouchableOpacity>
           )}
-          ListEmptyComponent={<Text style={s.empty}>No exercises found. Check backend connection.</Text>}
+          ListEmptyComponent={<Text style={s.empty}>No exercises. Check backend connection.</Text>}
         />
       )}
     </View>
