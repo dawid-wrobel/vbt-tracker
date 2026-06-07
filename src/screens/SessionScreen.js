@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, FlatList } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 
@@ -11,10 +12,27 @@ export default function SessionScreen({ route, navigation }) {
   const [reps, setReps] = useState([]);
   const [active, setActive] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [todaySessions, setTodaySessions] = useState([]);
   const repsRef = useRef([]);
   const sessionIdRef = useRef(null);
 
   useEffect(() => { repsRef.current = reps; }, [reps]);
+
+  useFocusEffect(useCallback(() => {
+    loadTodaySessions();
+  }, []));
+
+  const loadTodaySessions = async () => {
+    try {
+      const res = await api.getSessions();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const filtered = res.data
+        .filter(s => new Date(s.startTime) >= today)
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      setTodaySessions(filtered);
+    } catch {}
+  };
 
   const connectWebSocket = async (sid) => {
     if (wsRef.current) wsRef.current.close();
@@ -59,18 +77,17 @@ export default function SessionScreen({ route, navigation }) {
   };
 
   const finishSession = async () => {
-  if (wsRef.current) wsRef.current.close();
-  try {
-    const res = await api.finishSession(sessionId);
-    setActive(false);
-    setSessionId(null);
-    setWsConnected(false);
-    // Navigate to SessionDetail inside HomeStack
-    navigation.push('SessionDetail', { session: res.data });
-  } catch {
-    Alert.alert('Error', 'Could not finish session');
-  }
-};
+    if (wsRef.current) wsRef.current.close();
+    try {
+      const res = await api.finishSession(sessionId);
+      setActive(false);
+      setSessionId(null);
+      setWsConnected(false);
+      navigation.push('SessionDetail', { session: res.data });
+    } catch {
+      Alert.alert('Error', 'Could not finish session');
+    }
+  };
 
   const simulateRep = () => {
     const rep = {
@@ -87,8 +104,14 @@ export default function SessionScreen({ route, navigation }) {
 
   const vc = (v) => v > 0.7 ? '#00ff88' : v > 0.5 ? '#ffe66d' : '#ff6b6b';
 
+  const formatTime = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <View style={s.container}>
+      {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>{exercise?.name}</Text>
         {wsConnected && (
@@ -100,12 +123,44 @@ export default function SessionScreen({ route, navigation }) {
       </View>
 
       {!active ? (
-        // Centered start button
-        <View style={s.centerWrap}>
+        <>
+          {/* Today's sessions list */}
+          <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+            {todaySessions.length > 0 && (
+              <>
+                <Text style={s.sectionTitle}>TODAY</Text>
+                {todaySessions.map((item, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={s.sessionCard}
+                    onPress={() => navigation.push('SessionDetail', { session: item })}
+                  >
+                    <View style={s.sessionRow}>
+                      <Text style={s.sessionName}>{item.exerciseName}</Text>
+                      <Text style={s.sessionTime}>{formatTime(item.startTime)}</Text>
+                    </View>
+                    <View style={s.sessionRow}>
+                      <Text style={s.sessionMeta}>{item.summary?.totalReps || 0} reps</Text>
+                      <Text style={s.sessionMeta}>{(item.summary?.avgVelocity || 0).toFixed(2)} m/s avg</Text>
+                      <Text style={s.sessionMeta}>{(item.summary?.peakVelocity || 0).toFixed(2)} m/s peak</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {todaySessions.length === 0 && (
+              <View style={s.emptyWrap}>
+                <Text style={s.emptyText}>No sessions today yet</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Start button pinned to bottom */}
           <TouchableOpacity style={s.startBtn} onPress={startSession}>
             <Text style={s.startBtnText}>START SESSION</Text>
           </TouchableOpacity>
-        </View>
+        </>
       ) : (
         <>
           <View style={s.repCount}>
@@ -145,9 +200,17 @@ const s = StyleSheet.create({
   wsbadge: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   wsdot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00ff88', marginRight: 6 },
   wstext: { color: '#00ff88', fontSize: 12 },
-  centerWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  startBtn: { backgroundColor: '#00ff88', paddingVertical: 20, paddingHorizontal: 48, borderRadius: 16 },
-  startBtnText: { color: '#000', fontWeight: '900', fontSize: 20, letterSpacing: 2 },
+  scroll: { flex: 1 },
+  sectionTitle: { color: '#555', fontSize: 10, letterSpacing: 3, marginBottom: 12 },
+  sessionCard: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 14, marginBottom: 10 },
+  sessionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  sessionName: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  sessionTime: { color: '#555', fontSize: 12 },
+  sessionMeta: { color: '#888', fontSize: 12 },
+  emptyWrap: { flex: 1, alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: '#333', fontSize: 14 },
+  startBtn: { backgroundColor: '#00ff88', padding: 20, borderRadius: 14, alignItems: 'center', marginTop: 16 },
+  startBtnText: { color: '#000', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
   repCount: { alignItems: 'center', marginVertical: 16 },
   repNum: { color: '#00ff88', fontSize: 80, fontWeight: '900' },
   repLabel: { color: '#555', letterSpacing: 4, fontSize: 12 },
@@ -159,5 +222,5 @@ const s = StyleSheet.create({
   vel: { fontSize: 18, fontWeight: '900', width: 70 },
   phase: { color: '#888', fontSize: 11, flex: 1, textAlign: 'right' },
   finishBtn: { backgroundColor: '#ff6b6b', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 12 },
-  finishBtnText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 2 }
+  finishBtnText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 2 },
 });

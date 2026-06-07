@@ -113,7 +113,7 @@ export default function SessionDetailScreen({ route, navigation }) {
         <Text style={s.nextBtnText}>NEXT SESSION — {session.exerciseName}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={s.backBtn} onPress={() => navigation.navigate('Train')}>
+      <TouchableOpacity style={s.backBtn} onPress={() => navigation.navigate('Train', { screen: 'HomeMain' })}>
         <Text style={s.backBtnText}>BACK TO EXERCISES</Text>
       </TouchableOpacity>
     </ScrollView>
