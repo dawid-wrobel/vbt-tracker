@@ -3,14 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 
-// Shared wsRef — passed to ConfigScreen via navigation
 export const wsRef = { current: null };
 
 export default function SessionScreen({ route, navigation }) {
   const [sessionId, setSessionId] = useState(null);
   const [reps, setReps] = useState([]);
   const [active, setActive] = useState(false);
-  const [wsStatus, setWsStatus] = useState('disconnected');
+  const [wsConnected, setWsConnected] = useState(false);
   const repsRef = useRef([]);
   const sessionIdRef = useRef(null);
 
@@ -18,20 +17,15 @@ export default function SessionScreen({ route, navigation }) {
 
   const connectWebSocket = async (sid) => {
     if (wsRef.current) wsRef.current.close();
-
-    // Load saved config and send on connect
     const saved = await AsyncStorage.getItem('vbt_config');
     const cfg = saved ? JSON.parse(saved) : null;
-
     const socket = new WebSocket('wss://vbt-backend-production.up.railway.app');
     wsRef.current = socket;
 
     socket.onopen = () => {
-      setWsStatus('connected');
-      // Send saved config to sensor on connect
+      setWsConnected(true);
       if (cfg) socket.send(JSON.stringify({ cmd: 'config', ...cfg }));
     };
-
     socket.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
@@ -42,9 +36,8 @@ export default function SessionScreen({ route, navigation }) {
         }
       } catch {}
     };
-
-    socket.onerror = () => setWsStatus('error');
-    socket.onclose = () => setWsStatus('disconnected');
+    socket.onerror = () => setWsConnected(false);
+    socket.onclose = () => setWsConnected(false);
   };
 
   const startSession = async () => {
@@ -74,6 +67,7 @@ export default function SessionScreen({ route, navigation }) {
       const res = await api.finishSession(sessionId);
       setActive(false);
       setSessionId(null);
+      setWsConnected(false);
       navigation.navigate('History', {
         screen: 'SessionDetail',
         params: { session: res.data }
@@ -97,14 +91,17 @@ export default function SessionScreen({ route, navigation }) {
   };
 
   const vc = (v) => v > 0.7 ? '#00ff88' : v > 0.5 ? '#ffe66d' : '#ff6b6b';
-  const wsColor = { connected: '#00ff88', disconnected: '#555', error: '#ff6b6b' };
 
   return (
     <View style={s.container}>
-      <Text style={s.title}>{route?.params?.exercise?.name || 'Select exercise in Train tab'}</Text>
-      <View style={s.statusRow}>
-        <View style={[s.dot, { backgroundColor: wsColor[wsStatus] }]} />
-        <Text style={s.statusText}>Sensor: {wsStatus}</Text>
+      <View style={s.header}>
+        <Text style={s.title}>{route?.params?.exercise?.name || 'Select exercise in Train tab'}</Text>
+        {wsConnected && (
+          <View style={s.wsbadge}>
+            <View style={s.wsdot} />
+            <Text style={s.wstext}>Sensor connected</Text>
+          </View>
+        )}
       </View>
 
       {!active ? (
@@ -141,10 +138,12 @@ export default function SessionScreen({ route, navigation }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a', padding: 20, paddingTop: 60 },
-  title: { color: '#00ff88', fontSize: 22, fontWeight: '900', marginBottom: 12 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  statusText: { color: '#888', fontSize: 13 },
+  header: { marginBottom: 20 },
+  title: { color: '#00ff88', fontSize: 22, fontWeight: '900' },
+  wsbage: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  wsbadge: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  wsdot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00ff88', marginRight: 6 },
+  wstext: { color: '#00ff88', fontSize: 12 },
   startBtn: { backgroundColor: '#00ff88', padding: 20, borderRadius: 12, alignItems: 'center' },
   startBtnText: { color: '#000', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
   repCount: { alignItems: 'center', marginVertical: 16 },
