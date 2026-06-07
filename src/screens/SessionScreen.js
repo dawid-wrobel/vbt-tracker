@@ -59,17 +59,18 @@ export default function SessionScreen({ route, navigation }) {
   };
 
   const finishSession = async () => {
-    if (wsRef.current) wsRef.current.close();
-    try {
-      const res = await api.finishSession(sessionId);
-      setActive(false);
-      setSessionId(null);
-      setWsConnected(false);
-      navigation.navigate('SessionDetail', { session: res.data });
-    } catch {
-      Alert.alert('Error', 'Could not finish session');
-    }
-  };
+  if (wsRef.current) wsRef.current.close();
+  try {
+    const res = await api.finishSession(sessionId);
+    setActive(false);
+    setSessionId(null);
+    setWsConnected(false);
+    // Navigate to SessionDetail inside HomeStack
+    navigation.push('SessionDetail', { session: res.data });
+  } catch {
+    Alert.alert('Error', 'Could not finish session');
+  }
+};
 
   const simulateRep = () => {
     const rep = {

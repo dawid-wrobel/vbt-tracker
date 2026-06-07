@@ -18,9 +18,16 @@ const EmptyIcon = () => <View />;
 
 function HomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
-      <Stack.Screen name="Session" component={SessionScreen} />
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#0a0a0a' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: '900' },
+      }}
+    >
+      <Stack.Screen name="HomeMain"      component={HomeScreen}          options={{ headerShown: false }} />
+      <Stack.Screen name="Session"       component={SessionScreen}       options={{ headerShown: false }} />
+      <Stack.Screen name="SessionDetail" component={SessionDetailScreen} options={{ title: 'Session Details' }} />
     </Stack.Navigator>
   );
 }
