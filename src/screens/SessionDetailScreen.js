@@ -26,8 +26,8 @@ export default function SessionDetailScreen({ route }) {
 
   const reps = session.reps || [];
   const velocityData = reps.map(r => r.avgVelocity || 0);
-  const fatigueIndex = session.summary?.fatigueIndex || 0;
-  const fatigueColor = fatigueIndex < 30 ? '#00ff88' : fatigueIndex < 60 ? '#ffe66d' : '#ff6b6b';
+  //const fatigueIndex = session.summary?.fatigueIndex || 0;
+  //const fatigueColor = fatigueIndex < 30 ? '#00ff88' : fatigueIndex < 60 ? '#ffe66d' : '#ff6b6b';
 
   return (
     <ScrollView style={s.container}>
@@ -47,15 +47,6 @@ export default function SessionDetailScreen({ route }) {
             <Text style={s.statLabel}>{item.label}</Text>
           </View>
         ))}
-      </View>
-
-      {/* Fatigue gauge */}
-      <View style={s.fatigueCard}>
-        <Text style={s.fatigueLabel}>FATIGUE INDEX</Text>
-        <Text style={[s.fatigueValue, { color: fatigueColor }]}>{fatigueIndex}</Text>
-        <View style={s.bar}>
-          <View style={[s.barFill, { width: `${fatigueIndex}%`, backgroundColor: fatigueColor }]} />
-        </View>
       </View>
 
       {/* Velocity chart */}
@@ -113,9 +104,6 @@ const s = StyleSheet.create({
   statCard: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 16, width: (W - 60) / 2, alignItems: 'center' },
   statValue: { color: '#00ff88', fontSize: 24, fontWeight: '900' },
   statLabel: { color: '#555', fontSize: 10, letterSpacing: 2, marginTop: 4 },
-  fatigueCard: { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, marginBottom: 16 },
-  fatigueLabel: { color: '#555', fontSize: 10, letterSpacing: 3, marginBottom: 8 },
-  fatigueValue: { fontSize: 48, fontWeight: '900', textAlign: 'center' },
   bar: { height: 8, backgroundColor: '#2a2a2a', borderRadius: 4, marginTop: 8 },
   barFill: { height: 8, borderRadius: 4 },
   chartCard: { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, marginBottom: 16 },

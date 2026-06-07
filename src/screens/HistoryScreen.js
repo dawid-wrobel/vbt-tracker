@@ -11,8 +11,6 @@ export default function HistoryScreen({ navigation }) {
     api.getSessions().then(r => { setSessions(r.data); setLoading(false); });
   }, []));
 
-  const fatigueColor = (f) => f < 30 ? '#00ff88' : f < 60 ? '#ffe66d' : '#ff6b6b';
-
   return (
     <View style={s.container}>
       <Text style={s.title}>History</Text>
@@ -24,14 +22,12 @@ export default function HistoryScreen({ navigation }) {
             <TouchableOpacity style={s.card} onPress={() => navigation.navigate('SessionDetail', { session: item })}>
               <View style={s.row}>
                 <Text style={s.exName}>{item.exerciseName}</Text>
-                <Text style={[s.fatigue, { color: fatigueColor(item.summary?.fatigueIndex || 0) }]}>
-                  {item.summary?.fatigueIndex || 0}% fatigue
-                </Text>
+                <Text style={s.date}>{new Date(item.startTime).toLocaleDateString()}</Text>
               </View>
               <View style={s.row}>
                 <Text style={s.meta}>{item.summary?.totalReps || 0} reps</Text>
                 <Text style={s.meta}>{item.summary?.avgVelocity?.toFixed(2) || '—'} m/s avg</Text>
-                <Text style={s.date}>{new Date(item.startTime).toLocaleDateString()}</Text>
+                <Text style={s.meta}>{item.summary?.peakVelocity?.toFixed(2) || '—'} m/s peak</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -48,8 +44,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: '#1a1a1a', padding: 16, borderRadius: 12, marginBottom: 10 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   exName: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  fatigue: { fontSize: 13, fontWeight: '700' },
-  meta: { color: '#888', fontSize: 12 },
   date: { color: '#555', fontSize: 11 },
+  meta: { color: '#888', fontSize: 12 },
   empty: { color: '#555', textAlign: 'center', marginTop: 60, fontSize: 16 }
 });
