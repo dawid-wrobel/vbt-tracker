@@ -35,9 +35,9 @@ export default function AppNavigator() {
           tabBarActiveTintColor: '#00ff88',
           tabBarInactiveTintColor: '#555',
           tabBarStyle: { backgroundColor: '#111', borderTopColor: '#222' },
+          tabBarShowIcon: false,
           headerShown: false,
-          tabBarShowLabel: true,
-          tabBarLabelStyle: { fontSize: 11, letterSpacing: 1 },
+          tabBarLabelStyle: { fontSize: 11, letterSpacing: 1, marginBottom: 4 },
         }}
       >
         <Tab.Screen name="Train"   component={HomeScreen}       options={{ tabBarLabel: 'TRAIN' }} />

@@ -1,38 +1,50 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { api } from '../api/client';
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
+export default function HistoryScreen({ navigation }) {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handle = async () => {
-    try {
-      await login(email, password);
-    } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || 'Login failed');
-    }
-  };
+  useFocusEffect(useCallback(() => {
+    api.getSessions().then(r => { setSessions(r.data); setLoading(false); });
+  }, []));
 
   return (
     <View style={s.container}>
-      <Text style={s.title}>VBT Tracker</Text>
-      <Text style={s.sub}>Velocity Based Training</Text>
-      <TextInput style={s.input} placeholder="Email" placeholderTextColor="#555" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={s.input} placeholder="Password" placeholderTextColor="#555" value={password} onChangeText={setPassword} secureTextEntry />
-      <TouchableOpacity style={s.btn} onPress={handle}><Text style={s.btnText}>LOGIN</Text></TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}><Text style={s.link}>Don't have an account? Register</Text></TouchableOpacity>
+      <Text style={s.title}>History</Text>
+      {loading ? <ActivityIndicator color="#00ff88" /> : (
+        <FlatList
+          data={sessions}
+          keyExtractor={i => i._id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={s.card} onPress={() => navigation.navigate('SessionDetail', { session: item })}>
+              <View style={s.row}>
+                <Text style={s.exName}>{item.exerciseName}</Text>
+                <Text style={s.date}>{new Date(item.startTime).toLocaleDateString()}</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.meta}>{item.summary?.totalReps || 0} reps</Text>
+                <Text style={s.meta}>{item.summary?.avgVelocity?.toFixed(2) || '—'} m/s avg</Text>
+                <Text style={s.meta}>{item.summary?.peakVelocity?.toFixed(2) || '—'} m/s peak</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={<Text style={s.empty}>No sessions yet. Start training!</Text>}
+        />
+      )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 40, color: '#00ff88', fontWeight: '900', textAlign: 'center', letterSpacing: 2 },
-  sub: { color: '#555', textAlign: 'center', marginBottom: 40, fontSize: 13, letterSpacing: 4 },
-  input: { backgroundColor: '#1a1a1a', color: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#222' },
-  btn: { backgroundColor: '#00ff88', padding: 16, borderRadius: 8, marginTop: 8 },
-  btnText: { color: '#000', fontWeight: '900', textAlign: 'center', fontSize: 16, letterSpacing: 2 },
-  link: { color: '#555', textAlign: 'center', marginTop: 20 }
+  container: { flex: 1, backgroundColor: '#0a0a0a', padding: 20, paddingTop: 60 },
+  title: { color: '#fff', fontSize: 28, fontWeight: '900', marginBottom: 24 },
+  card: { backgroundColor: '#1a1a1a', padding: 16, borderRadius: 12, marginBottom: 10 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  exName: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  date: { color: '#555', fontSize: 11 },
+  meta: { color: '#888', fontSize: 12 },
+  empty: { color: '#555', textAlign: 'center', marginTop: 60, fontSize: 16 }
 });

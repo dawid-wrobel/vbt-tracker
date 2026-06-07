@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 export default function SensorTestScreen() {
   const [running, setRunning] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [hasData, setHasData] = useState(false);
   const [reps, setReps] = useState([]);
   const [lastReading, setLastReading] = useState(null);
   const wsRef = useRef(null);
@@ -12,10 +13,11 @@ export default function SensorTestScreen() {
   const start = () => {
     setReps([]);
     setLastReading(null);
+    setHasData(false);
     repsRef.current = [];
     setRunning(true);
 
-    const socket = new WebSocket('wss://vbt-backend-production.up.railway.app');
+    const socket = new WebSocket('wss://your-railway-url.up.railway.app');
     wsRef.current = socket;
 
     socket.onopen = () => setWsConnected(true);
@@ -23,8 +25,8 @@ export default function SensorTestScreen() {
     socket.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-
         if (data.type === 'imu') {
+          setHasData(true);
           setLastReading({
             accelMag: parseFloat(data.accelMag || 0).toFixed(3),
             gyroMag:  parseFloat(data.gyroMag  || 0).toFixed(1),
@@ -32,7 +34,6 @@ export default function SensorTestScreen() {
             peak:     parseFloat(data.peakVelocity || 0).toFixed(4),
           });
         }
-
         if (data.type === 'rep') {
           const r = data.rep;
           const newRep = {
@@ -47,19 +48,21 @@ export default function SensorTestScreen() {
       } catch {}
     };
 
-    socket.onerror = () => setWsConnected(false);
-    socket.onclose = () => setWsConnected(false);
+    socket.onerror = () => { setWsConnected(false); setHasData(false); };
+    socket.onclose = () => { setWsConnected(false); setHasData(false); };
   };
 
   const stop = () => {
     if (wsRef.current) wsRef.current.close();
     setRunning(false);
     setWsConnected(false);
+    setHasData(false);
     setReps([]);
     setLastReading(null);
     repsRef.current = [];
   };
 
+  const sensorActive = wsConnected && hasData;
   const vc = (v) => parseFloat(v) > 0.7 ? '#00ff88' : parseFloat(v) > 0.5 ? '#ffe66d' : '#ff6b6b';
 
   return (
@@ -68,11 +71,13 @@ export default function SensorTestScreen() {
       <Text style={s.sub}>Temporary — data clears on stop</Text>
 
       <View style={s.statusRow}>
-        <View style={[s.dot, { backgroundColor: wsConnected ? '#00ff88' : '#555' }]} />
-        <Text style={s.statusText}>{wsConnected ? 'Sensor connected' : 'Waiting for sensor...'}</Text>
+        <View style={[s.dot, { backgroundColor: sensorActive ? '#00ff88' : '#555' }]} />
+        <Text style={s.statusText}>
+          {sensorActive ? 'Sensor connected' : running ? 'Waiting for sensor...' : 'Press START TEST'}
+        </Text>
       </View>
 
-      {lastReading && (
+      {lastReading && sensorActive && (
         <View style={s.grid}>
           <View style={s.cell}>
             <Text style={s.cellVal}>{lastReading.accelMag}</Text>
@@ -90,12 +95,6 @@ export default function SensorTestScreen() {
             <Text style={s.cellVal}>{lastReading.peak}</Text>
             <Text style={s.cellLbl}>PEAK VEL</Text>
           </View>
-        </View>
-      )}
-
-      {!lastReading && running && (
-        <View style={s.waiting}>
-          <Text style={s.waitingText}>Waiting for sensor data...</Text>
         </View>
       )}
 
@@ -134,12 +133,10 @@ const s = StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   statusText: { fontSize: 13, color: '#888' },
-  grid: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   cell: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 14, width: '47%', alignItems: 'center' },
   cellVal: { color: '#00ff88', fontSize: 22, fontWeight: '900', fontFamily: 'monospace' },
   cellLbl: { color: '#555', fontSize: 10, letterSpacing: 2, marginTop: 4 },
-  waiting: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 20, alignItems: 'center', marginBottom: 20 },
-  waitingText: { color: '#555', fontSize: 13 },
   repHeader: { marginBottom: 10 },
   repHeaderText: { color: '#555', fontSize: 11, letterSpacing: 3 },
   repList: { flex: 1, marginBottom: 16 },
