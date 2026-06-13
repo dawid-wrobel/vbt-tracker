@@ -26,14 +26,13 @@ export default function SessionDetailScreen({ route, navigation }) {
   const reps = session.reps || [];
   const velocityData = reps.map(r => parseFloat(r.avgVelocity) || 0);
   const hasChart = velocityData.length > 1;
-  const chartWidth = W - 80; // padding 20 each side + card padding 20 each side
+  const chartWidth = W - 80;
 
   return (
     <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 60 }}>
       <Text style={s.title}>{session.exerciseName}</Text>
       <Text style={s.date}>{new Date(session.startTime).toLocaleString()}</Text>
 
-      {/* Stats — only reps, peak vel, avg vel */}
       <View style={s.grid}>
         {[
           { label: 'REPS',     value: session.summary?.totalReps || reps.length },
@@ -47,7 +46,7 @@ export default function SessionDetailScreen({ route, navigation }) {
         ))}
       </View>
 
-      {/* Velocity chart — fixed width */}
+      {/* Velocity chart */}
       {hasChart && (
         <View style={s.chartCard}>
           <Text style={s.chartTitle}>VELOCITY PER REP</Text>

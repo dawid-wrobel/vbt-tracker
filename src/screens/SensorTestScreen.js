@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
-const WS_URL = 'wss://vbt-backend-production.up.railway.app'; // ← update this
+const WS_URL = 'wss://vbt-backend-production.up.railway.app'; 
 
 export default function SensorTestScreen() {
   const [running, setRunning] = useState(false);

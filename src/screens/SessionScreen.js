@@ -111,7 +111,6 @@ export default function SessionScreen({ route, navigation }) {
 
   return (
     <View style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>{exercise?.name}</Text>
         {wsConnected && (
@@ -124,7 +123,6 @@ export default function SessionScreen({ route, navigation }) {
 
       {!active ? (
         <>
-          {/* Today's sessions list */}
           <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
             {todaySessions.length > 0 && (
               <>
@@ -156,7 +154,6 @@ export default function SessionScreen({ route, navigation }) {
             )}
           </ScrollView>
 
-          {/* Start button pinned to bottom */}
           <TouchableOpacity style={s.startBtn} onPress={startSession}>
             <Text style={s.startBtnText}>START SESSION</Text>
           </TouchableOpacity>

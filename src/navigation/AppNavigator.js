@@ -13,7 +13,6 @@ import SensorTestScreen from '../screens/SensorTestScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Empty icon — this is the ONLY way to remove triangles in React Navigation
 const EmptyIcon = () => <View />;
 
 function HomeStack() {
