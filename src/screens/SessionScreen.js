@@ -177,7 +177,7 @@ export default function SessionScreen({ route, navigation }) {
               <View key={i} style={s.repRow}>
                 <Text style={s.repRowNum}>REP {r.repNumber}</Text>
                 <Text style={[s.vel, { color: vc(r.avgVelocity) }]}>
-                  {parseFloat(r.avgVelocity).toFixed(2)} m/s
+                    {parseFloat(r.avgVelocity).toFixed(2)} m/s
                 </Text>
                 <Text style={s.phase}>↑{r.concentricDuration}ms ↓{r.eccentricDuration}ms</Text>
               </View>
@@ -217,10 +217,10 @@ const s = StyleSheet.create({
   simBtn: { backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#333' },
   simBtnText: { color: '#555', fontSize: 12 },
   repList: { flex: 1 },
-  repRow: { backgroundColor: '#1a1a1a', padding: 14, borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  repRowNum: { color: '#555', fontSize: 12, fontWeight: '700', width: 50 },
-  vel: { fontSize: 18, fontWeight: '900', width: 70 },
-  phase: { color: '#888', fontSize: 11, flex: 1, textAlign: 'right' },
+  repRow: { backgroundColor: '#1a1a1a', padding: 14, borderRadius: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' },
+  repRowNum: { color: '#555', fontSize: 12, fontWeight: '700', width: 44 },
+  vel: { fontSize: 16, fontWeight: '900', width: 100, flexShrink: 0 },
+  phase: { color: '#888', fontSize: 11, flex: 1, textAlign: 'right', flexShrink: 1 },
   finishBtn: { backgroundColor: '#ff6b6b', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 12 },
   finishBtnText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 2 },
 });

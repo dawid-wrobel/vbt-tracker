@@ -39,6 +39,7 @@ function HistoryStack() {
         headerStyle: { backgroundColor: '#0a0a0a' },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '900' },
+        headerBackTitle: 'History',
       }}
     >
       <Stack.Screen name="HistoryMain" component={HistoryScreen} options={{ headerShown: false }} />
